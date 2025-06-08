@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Map</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .map-container {
+            position: relative;
+            height: 100vh;
+            width: 100%;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+            border-radius: 0;
+        }
+
+        .control-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 1000;
+            min-width: 280px;
+        }
+
+        .control-panel h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #34495e;
+            font-weight: 500;
+        }
+
+        .control-group input, .control-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .control-group input:focus, .control-group select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .btn-danger:hover {
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60, #229954);
+        }
+
+        .btn-success:hover {
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
+        }
+
+        .info-panel {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 1000;
+            max-width: 250px;
+        }
+
+        .info-panel h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .info-panel p {
+            color: #34495e;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+
+        .coordinates {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            z-index: 1000;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 2000;
+            display: none;
+        }
+
+        .marker-popup {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .marker-popup h4 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+        }
+
+        .marker-popup p {
+            margin: 5px 0;
+            color: #34495e;
+        }
+
+        .custom-marker {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .control-panel {
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                width: auto;
+                min-width: auto;
+            }
+            
+            .info-panel {
+                position: fixed;
+                bottom: 10px;
+                left: 10px;
+                right: 10px;
+                max-width: none;
+            }
+            
+            .coordinates {
+                top: auto;
+                bottom: 10px;
+                right: 10px;
+                left: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="map-container">
+        <div id="map"></div>
+        
+        <div class="control-panel">
+            <h3>🗺️ Map Controls</h3>
+            
+            <div class="control-group">
+                <label for="searchLocation">Search Location:</label>
+                <input type="text" id="searchLocation" placeholder="Enter city or address...">
+                <button class="btn" onclick="searchLocation()">Search</button>
+            </div>
+            
+            <div class="control-group">
+                <label for="mapStyle">Map Style:</label>
+                <select id="mapStyle" onchange="changeMapStyle()">
+                    <option value="osm">OpenStreetMap</option>
+                    <option value="satellite">Satellite</option>
+                    <option value="terrain">Terrain</option>
+                    <option value="dark">Dark Mode</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <button class="btn btn-success" onclick="addRandomMarker()">Add Random Marker</button>
+                <button class="btn btn-danger" onclick="clearAllMarkers()">Clear All Markers</button>
+            </div>
+            
+            <div class="control-group">
+                <button class="btn" onclick="getCurrentLocation()">My Location</button>
+                <button class="btn" onclick="toggleMeasureTool()">Measure Distance</button>
+            </div>
+        </div>
+        
+        <div class="coordinates" id="coordinates">
+            Lat: 0.0000, Lng: 0.0000
+        </div>
+        
+        <div class="info-panel">
+            <h4>📍 Map Information</h4>
+            <p id="zoomLevel">Zoom Level: 13</p>
+            <p id="markerCount">Markers: 0</p>
+            <p id="centerCoords">Center: Loading...</p>
+        </div>
+        
+        <div class="loading" id="loading">
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script>
+        let map;
+        let markers = [];
+        let currentTileLayer;
+        let measureMode = false;
+        let measurePolyline;
+        let measurePoints = [];
+
+        // Initialize map
+        function initMap() {
+            // Default to New York City
+            map = L.map('map').setView([40.7128, -74.0060], 13);
+            
+            // Add default tile layer
+            currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Add some default markers
+            addMarker(40.7128, -74.0060, "New York City", "The Big Apple");
+            addMarker(40.7589, -73.9851, "Times Square", "The Crossroads of the World");
+            addMarker(40.6892, -74.0445, "Statue of Liberty", "Symbol of Freedom");
+
+            // Event listeners
+            map.on('mousemove', updateCoordinates);
+            map.on('moveend', updateMapInfo);
+            map.on('zoomend', updateMapInfo);
+            map.on('click', onMapClick);
+
+            updateMapInfo();
+        }
+
+        function addMarker(lat, lng, title, description) {
+            const marker = L.marker([lat, lng])
+                .bindPopup(`
+                    <div class="marker-popup">
+                        <h4>${title}</h4>
+                        <p>${description}</p>
+                        <p><strong>Coordinates:</strong> ${lat.toFixed(4)}, ${lng.toFixed(4)}</p>
+                        <button onclick="removeMarker(${markers.length})" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-top: 5px;">Remove</button>
+                    </div>
+                `)
+                .addTo(map);
+
+            markers.push(marker);
+            updateMarkerCount();
+            return marker;
+        }
+
+        function removeMarker(index) {
+            if (markers[index]) {
+                map.removeLayer(markers[index]);
+                markers.splice(index, 1);
+                updateMarkerCount();
+            }
+        }
+
+        function clearAllMarkers() {
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+            updateMarkerCount();
+        }
+
+        function addRandomMarker() {
+            const bounds = map.getBounds();
+            const lat = bounds.getSouth() + Math.random() * (bounds.getNorth() - bounds.getSouth());
+            const lng = bounds.getWest() + Math.random() * (bounds.getEast() - bounds.getWest());
+            
+            const titles = ["Coffee Shop", "Restaurant", "Park", "Library", "Museum", "Store", "Hospital", "School"];
+            const title = titles[Math.floor(Math.random() * titles.length)];
+            
+            addMarker(lat, lng, title, `Random location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        }
+
+        function searchLocation() {
+            const query = document.getElementById('searchLocation').value;
+            if (!query) return;
+
+            showLoading(true);
+            
+            // Using Nominatim geocoding service
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    showLoading(false);
+                    if (data && data.length > 0) {
+                        const result = data[0];
+                        const lat = parseFloat(result.lat);
+                        const lng = parseFloat(result.lon);
+                        
+                        map.setView([lat, lng], 15);
+                        addMarker(lat, lng, result.display_name.split(',')[0], result.display_name);
+                    } else {
+                        alert('Location not found!');
+                    }
+                })
+                .catch(error => {
+                    showLoading(false);
+                    alert('Error searching location: ' + error.message);
+                });
+        }
+
+        function changeMapStyle() {
+            const style = document.getElementById('mapStyle').value;
+            
+            map.removeLayer(currentTileLayer);
+            
+            switch(style) {
+                case 'satellite':
+                    currentTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                        attribution: '© Esri'
+                    });
+                    break;
+                case 'terrain':
+                    currentTileLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenTopoMap'
+                    });
+                    break;
+                case 'dark':
+                    currentTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                        attribution: '© CartoDB'
+                    });
+                    break;
+                default:
+                    currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors'
+                    });
+            }
+            
+            currentTileLayer.addTo(map);
+        }
+
+        function getCurrentLocation() {
+            if (navigator.geolocation) {
+                showLoading(true);
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        showLoading(false);
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        
+                        map.setView([lat, lng], 15);
+                        addMarker(lat, lng, "Your Location", "Current GPS position");
+                    },
+                    error => {
+                        showLoading(false);
+                        alert('Error getting location: ' + error.message);
+                    }
+                );
+            } else {
+                alert('Geolocation is not supported by this browser.');
+            }
+        }
+
+        function toggleMeasureTool() {
+            measureMode = !measureMode;
+            
+            if (measureMode) {
+                document.body.style.cursor = 'crosshair';
+                alert('Click on the map to start measuring distance. Click again to finish.');
+            } else {
+                document.body.style.cursor = 'default';
+                if (measurePolyline) {
+                    map.removeLayer(measurePolyline);
+                    measurePolyline = null;
+                }
+                measurePoints = [];
+            }
+        }
+
+        function onMapClick(e) {
+            if (measureMode) {
+                measurePoints.push(e.latlng);
+                
+                if (measurePoints.length === 1) {
+                    // First point
+                    L.marker(e.latlng).addTo(map);
+                } else if (measurePoints.length === 2) {
+                    // Second point - calculate distance
+                    L.marker(e.latlng).addTo(map);
+                    
+                    const distance = measurePoints[0].distanceTo(measurePoints[1]);
+                    const distanceKm = (distance / 1000).toFixed(2);
+                    
+                    measurePolyline = L.polyline(measurePoints, {color: 'red', weight: 3})
+                        .bindPopup(`Distance: ${distanceKm} km`)
+                        .addTo(map);
+                    
+                    measurePolyline.openPopup();
+                    toggleMeasureTool();
+                }
+            }
+        }
+
+        function updateCoordinates(e) {
+            const coords = document.getElementById('coordinates');
+            coords.textContent = `Lat: ${e.latlng.lat.toFixed(4)}, Lng: ${e.latlng.lng.toFixed(4)}`;
+        }
+
+        function updateMapInfo() {
+            const zoomLevel = document.getElementById('zoomLevel');
+            const centerCoords = document.getElementById('centerCoords');
+            
+            zoomLevel.textContent = `Zoom Level: ${map.getZoom()}`;
+            
+            const center = map.getCenter();
+            centerCoords.textContent = `Center: ${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`;
+        }
+
+        function updateMarkerCount() {
+            const markerCount = document.getElementById('markerCount');
+            markerCount.textContent = `Markers: ${markers.length}`;
+        }
+
+        function showLoading(show) {
+            const loading = document.getElementById('loading');
+            loading.style.display = show ? 'block' : 'none';
+        }
+
+        // Initialize the map when page loads
+        window.addEventListener('load', initMap);
+    </script>
+</body>
+</html>
